@@ -40,11 +40,3 @@ This tool is for **educational and research purposes only**. Results are AI-gene
 Co-founder, [PromptGenix LLC](https://promptgenix.com)
 
 ---
-
-**repo 만들고 나서 순서:**
-
-1. `dti_explorer.html` 파일 업로드 (Add file → Upload)
-2. **Settings → Pages → Branch: main → Save**
-3. 2~3분 후 `kdh4win4.github.io/dti-explorer/dti_explorer.html` 접속 가능
-
-LinkedIn 링크도 이 URL로 올리면 돼요! 🎯
