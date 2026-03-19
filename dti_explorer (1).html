@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DTI Explorer — Bayesian Drug-Target Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060e1a; color: #c8d8e8; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .header {
+    background: linear-gradient(180deg, #0a1828 0%, #060e1a 100%);
+    border-bottom: 1px solid #0d2035;
+    padding: 18px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, #0056b3, #00d4ff);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; box-shadow: 0 0 16px #00d4ff44;
+  }
+  .logo-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: #e8f4ff; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 10px; color: #4a7a9a; letter-spacing: 2px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+  .badge { padding: 4px 10px; border-radius: 20px; border: 1px solid #1e3050; font-size: 10px; color: #4a7a9a; font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  /* API Key section */
+  .apikey-section {
+    background: #0a1828; border: 1px solid #ffd16644; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .apikey-label { font-family: 'DM Mono', monospace; font-size: 10px; color: #ffd166; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
+  .apikey-input {
+    flex: 1; background: #060e1a; border: 1px solid #1e3050; border-radius: 8px;
+    padding: 8px 12px; color: #c8d8e8; font-family: 'DM Mono', monospace; font-size: 12px;
+    outline: none; letter-spacing: 1px;
+  }
+  .apikey-input:focus { border-color: #ffd16666; }
+  .apikey-note { font-size: 10px; color: #4a5a6a; font-family: 'DM Mono', monospace; white-space: nowrap; }
+
+  /* Input panel */
+  .input-panel {
+    background: #0a1828; border-radius: 14px; padding: 20px;
+    border: 1px solid #1e3050; margin-bottom: 14px;
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px;
+  }
+  .input-label { font-size: 10px; color: #4a7a9a; letter-spacing: 2px; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  .text-input {
+    width: 100%; background: #060e1a; border: 1px solid #1e3050;
+    border-radius: 8px; padding: 10px 12px; color: #c8d8e8;
+    font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.2s;
+  }
+  .text-input:focus { border-color: #00d4ff66; }
+  .analyze-btn {
+    background: linear-gradient(135deg, #0056b3, #00a8d4);
+    border: none; border-radius: 8px; padding: 10px 22px;
+    color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600;
+    font-size: 13px; cursor: pointer; box-shadow: 0 0 16px #00d4ff44;
+    transition: all 0.2s; white-space: nowrap; align-self: flex-end;
+  }
+  .analyze-btn:disabled { background: #1e3050; box-shadow: none; cursor: not-allowed; }
+  .analyze-btn:hover:not(:disabled) { box-shadow: 0 0 24px #00d4ff66; transform: translateY(-1px); }
+
+  /* Examples */
+  .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+  .examples-label { font-size: 10px; color: #4a7a9a; font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+  .example-btn {
+    background: #0a1828; border: 1px solid #1e3050; border-radius: 20px;
+    padding: 4px 12px; color: #7aadcc; font-size: 11px; cursor: pointer;
+    font-family: 'DM Mono', monospace; transition: all 0.15s;
+  }
+  .example-btn:hover { border-color: #00d4ff66; color: #00d4ff; }
+
+  /* Error */
+  .error-box {
+    background: #1a0a0a; border: 1px solid #ff4444; border-radius: 10px;
+    padding: 12px 16px; color: #ff8888; margin-bottom: 20px;
+    font-family: 'DM Mono', monospace; font-size: 12px;
+  }
+
+  /* Spinner */
+  .spinner-wrap { text-align: center; padding: 40px 0; }
+  .spinner {
+    display: inline-block; width: 40px; height: 40px;
+    border: 3px solid #1e3050; border-top-color: #00d4ff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  .spinner-text { margin-top: 14px; color: #4a7a9a; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; }
+
+  /* Results */
+  .results { animation: fadeIn 0.4s ease; }
+
+  .top-row { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; margin-bottom: 16px; }
+
+  .card { background: #0a1828; border-radius: 14px; border: 1px solid #1e3050; padding: 18px 20px; }
+  .card-title { font-size: 10px; color: #4a7a9a; font-family: 'DM Mono', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+
+  .score-card {
+    background: #0a1828; border-radius: 14px; padding: 20px 28px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-number { font-size: 52px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; line-height: 1; }
+  .score-denom { font-size: 18px; font-family: 'DM Mono', monospace; }
+  .confidence-badge {
+    margin-top: 10px; padding: 3px 12px; border-radius: 20px;
+    font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: 2px;
+  }
+
+  .gauges-card {
+    background: #0a1828; border-radius: 14px; border: 1px solid #1e3050;
+    padding: 18px 20px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; align-items: center;
+  }
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .gauge-label { font-size: 10px; color: #8899aa; font-family: 'DM Mono', monospace; letter-spacing: 1px; text-transform: uppercase; }
+
+  .meta-card { background: #0a1828; border-radius: 14px; border: 1px solid #1e3050; padding: 18px 20px; min-width: 200px; display: flex; flex-direction: column; gap: 10px; }
+  .meta-label { font-size: 10px; color: #4a7a9a; font-family: 'DM Mono', monospace; letter-spacing: 1px; margin-bottom: 3px; }
+  .meta-value { font-size: 12px; font-family: 'DM Mono', monospace; font-weight: 600; }
+
+  .bayes-panel { background: #0d1b2a; border-radius: 10px; padding: 16px 18px; border: 1px solid #1e3050; margin-bottom: 16px; }
+  .bayes-row { display: flex; gap: 24px; margin-bottom: 14px; align-items: center; }
+  .bayes-item { display: flex; flex-direction: column; }
+  .bayes-item-label { font-size: 11px; color: #8899aa; font-family: 'DM Mono', monospace; }
+  .bayes-item-val { font-size: 20px; font-family: 'DM Mono', monospace; font-weight: 700; }
+  .bayes-arrow { color: #2a3a4a; font-size: 28px; align-self: center; }
+  .ci-bar { position: relative; height: 24px; background: #0a1520; border-radius: 6px; overflow: hidden; }
+  .ci-fill { position: absolute; height: 100%; background: #00d4ff22; border-left: 2px solid #00d4ff88; border-right: 2px solid #00d4ff88; }
+  .ci-needle { position: absolute; top: 0; bottom: 0; width: 2px; background: #00d4ff; box-shadow: 0 0 6px #00d4ff; }
+  .ci-label-l { position: absolute; left: 2%; top: 50%; transform: translateY(-50%); font-size: 9px; color: #4a6a8a; font-family: 'DM Mono', monospace; }
+  .ci-label-r { position: absolute; right: 2%; top: 50%; transform: translateY(-50%); font-size: 9px; color: #4a6a8a; font-family: 'DM Mono', monospace; }
+  .ci-note { margin-top: 6px; font-size: 10px; color: #4a7a9a; font-family: 'DM Mono', monospace; text-align: center; }
+
+  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .bar-row { margin-bottom: 8px; }
+  .bar-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .bar-name { font-size: 11px; color: #8899aa; font-family: 'DM Mono', monospace; }
+  .bar-pct { font-size: 11px; font-family: 'DM Mono', monospace; }
+  .bar-track { background: #0d1b2a; border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+  .residue-tag {
+    background: #00d4ff15; border: 1px solid #00d4ff44; border-radius: 6px;
+    padding: 2px 8px; font-size: 11px; color: #00d4ff; font-family: 'DM Mono', monospace;
+    display: inline-block; margin: 2px;
+  }
+  .drug-item {
+    background: #060e1a; border: 1px solid #1e3050; border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; color: #c8d8e8; font-family: 'DM Mono', monospace;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .drug-arrow { color: #ffd166; }
+  .alert-item {
+    background: #1a0a0a; border: 1px solid #ff444433; border-radius: 6px;
+    padding: 5px 10px; font-size: 11px; color: #ff8888; font-family: 'DM Mono', monospace; margin-bottom: 4px;
+  }
+
+  .history-panel { margin-top: 24px; background: #0a1828; border-radius: 12px; padding: 18px; border: 1px solid #1e3050; }
+  .history-btn {
+    background: #060e1a; border: 1px solid #1e3050; border-radius: 8px;
+    padding: 6px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .history-btn:hover { border-color: #00d4ff44; }
+  .history-name { font-size: 11px; color: #8899aa; font-family: 'DM Mono', monospace; }
+  .history-score { font-size: 11px; font-family: 'DM Mono', monospace; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon">💊</div>
+    <div>
+      <div class="logo-title">DTI Explorer</div>
+      <div class="logo-sub">Bayesian Drug-Target Analysis</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <span class="badge">Binding</span>
+    <span class="badge">ADMET</span>
+    <span class="badge">Selectivity</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- API Key -->
+  <div class="apikey-section">
+    <span class="apikey-label">🔑 API Key</span>
+    <input class="apikey-input" type="password" id="apiKey" placeholder="sk-ant-api03-..." />
+    <span class="apikey-note">console.anthropic.com → 개인용</span>
+  </div>
+
+  <!-- Input Panel -->
+  <div class="input-panel">
+    <div>
+      <div class="input-label">🎯 Protein Target</div>
+      <input class="text-input" id="proteinInput" placeholder="e.g. EGFR, ACE2, BCL-2..." />
+    </div>
+    <div>
+      <div class="input-label">⚗️ Compound / Drug</div>
+      <input class="text-input" id="compoundInput" placeholder="e.g. Erlotinib, Remdesivir..." />
+    </div>
+    <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">▶ Analyze</button>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <div class="examples">
+    <span class="examples-label">EXAMPLES:</span>
+    <button class="example-btn" onclick="setExample('ACE2','Remdesivir')">ACE2 / Remdesivir</button>
+    <button class="example-btn" onclick="setExample('EGFR','Erlotinib')">EGFR / Erlotinib</button>
+    <button class="example-btn" onclick="setExample('BCL-2','Venetoclax')">BCL-2 / Venetoclax</button>
+    <button class="example-btn" onclick="setExample('BRAF V600E','Vemurafenib')">BRAF V600E / Vemurafenib</button>
+    <button class="example-btn" onclick="setExample('PD-1','Pembrolizumab')">PD-1 / Pembrolizumab</button>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+  <div id="spinnerWrap" class="spinner-wrap" style="display:none;">
+    <div class="spinner"></div>
+    <div class="spinner-text">RUNNING BAYESIAN ANALYSIS...</div>
+  </div>
+
+  <div id="results" class="results" style="display:none;"></div>
+  <div id="historyPanel" style="display:none;"></div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are a drug-target interaction (DTI) analysis engine. Given a protein target and a small molecule compound, return a JSON object (no markdown, no backticks) with this exact structure:
+
+{
+  "binding_score": <float 0-1>,
+  "bayesian_posterior": <float 0-1>,
+  "prior_probability": <float 0-1>,
+  "likelihood_ratio": <float 1-50>,
+  "confidence_interval": [<lower float>, <upper float>],
+  "interaction_type": "<one of: Competitive Inhibitor | Allosteric Modulator | Covalent Binder | Partial Agonist | Antagonist | Unknown>",
+  "key_residues": ["<residue1>", "<residue2>", "<residue3>"],
+  "binding_pocket": "<brief description of binding pocket>",
+  "mechanism": "<1-2 sentence mechanistic explanation>",
+  "selectivity_index": <float 0-1>,
+  "toxicity_flag": <boolean>,
+  "drug_likeness": <float 0-1>,
+  "similar_approved_drugs": ["<drug1>", "<drug2>"],
+  "confidence_level": "<High | Medium | Low>",
+  "mmgbsa_estimate": <float, kcal/mol, typically -5 to -15>,
+  "structural_alerts": ["<alert1 or empty>"]
+}
+
+Base your analysis on known pharmacology, structural biology, and Bayesian reasoning. Be scientifically grounded but acknowledge uncertainty. Return ONLY valid JSON.`;
+
+let history = [];
+
+function setExample(p, c) {
+  document.getElementById('proteinInput').value = p;
+  document.getElementById('compoundInput').value = c;
+}
+
+function colorForScore(s) {
+  if (s > 0.7) return '#00d4ff';
+  if (s > 0.4) return '#ffd166';
+  return '#ff6b6b';
+}
+
+function gauge(value, label, color) {
+  const pct = Math.round(value * 100);
+  const r = 36, circ = 2 * Math.PI * r;
+  const arc = (value * 270 / 360) * circ;
+  return `
+    <div class="gauge-wrap">
+      <svg width="90" height="70" viewBox="0 0 90 70">
+        <path d="M 10 65 A 35 35 0 1 1 80 65" fill="none" stroke="#1e2a3a" stroke-width="7" stroke-linecap="round"/>
+        <path d="M 10 65 A 35 35 0 1 1 80 65" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="${arc} ${circ}" style="filter:drop-shadow(0 0 4px ${color}88)"/>
+        <text x="45" y="60" text-anchor="middle" fill="${color}" font-size="14" font-family="DM Mono,monospace" font-weight="700">${pct}%</text>
+      </svg>
+      <span class="gauge-label">${label}</span>
+    </div>`;
+}
+
+function barMeter(value, label, color) {
+  const pct = Math.round(value * 100);
+  return `
+    <div class="bar-row">
+      <div class="bar-header">
+        <span class="bar-name">${label}</span>
+        <span class="bar-pct" style="color:${color}">${pct}%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}88,${color});box-shadow:0 0 6px ${color}66;"></div>
+      </div>
+    </div>`;
+}
+
+function renderResults(data, protein, compound) {
+  const cl = data.confidence_level;
+  const cc = cl === 'High' ? '#00d4ff' : cl === 'Medium' ? '#ffd166' : '#ff6b6b';
+  const ci = data.confidence_interval;
+  const leftPct = (ci[0] * 100).toFixed(0);
+  const widthPct = ((ci[1] - ci[0]) * 100).toFixed(0);
+  const midPct = (data.bayesian_posterior * 100).toFixed(1);
+
+  document.getElementById('results').innerHTML = `
+    <!-- Header pair -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:16px;color:#e8f4ff;font-weight:700;">${protein}</span>
+      <span style="color:#2a4a6a;font-size:20px;">⟷</span>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:16px;color:#ffd166;font-weight:700;">${compound}</span>
+    </div>
+
+    <!-- Top row -->
+    <div class="top-row">
+      <div class="score-card" style="border:1px solid ${cc}44;box-shadow:0 0 24px ${cc}22;">
+        <div class="card-title" style="color:#4a7a9a;">Binding Score</div>
+        <div class="score-number" style="color:${cc};filter:drop-shadow(0 0 12px ${cc}66);">${(data.binding_score*100).toFixed(0)}</div>
+        <div class="score-denom" style="color:${cc}">/100</div>
+        <div class="confidence-badge" style="background:${cc}22;border:1px solid ${cc}66;color:${cc};">${cl} Confidence</div>
+      </div>
+
+      <div class="gauges-card">
+        ${gauge(data.bayesian_posterior,'Posterior','#00d4ff')}
+        ${gauge(data.selectivity_index,'Selectivity','#a0f0a0')}
+        ${gauge(data.drug_likeness,'Drug-like','#ffd166')}
+        ${gauge(data.prior_probability,'Prior P','#cc99ff')}
+      </div>
+
+      <div class="meta-card">
+        <div>
+          <div class="meta-label">INTERACTION TYPE</div>
+          <div class="meta-value" style="color:#00d4ff;">${data.interaction_type}</div>
+        </div>
+        <div>
+          <div class="meta-label">ΔG (MM-GBSA est.)</div>
+          <div class="meta-value" style="color:#a0f0a0;font-size:14px;">${data.mmgbsa_estimate?.toFixed(1)} kcal/mol</div>
+        </div>
+        <div>
+          <div class="meta-label">TOXICITY FLAG</div>
+          <div class="meta-value" style="color:${data.toxicity_flag?'#ff6b6b':'#a0f0a0'};">
+            ${data.toxicity_flag ? '⚠ FLAGGED' : '✓ CLEAR'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bayesian Panel -->
+    <div class="bayes-panel">
+      <div class="card-title">Bayesian Posterior Distribution</div>
+      <div class="bayes-row">
+        <div class="bayes-item">
+          <span class="bayes-item-label">Prior P</span>
+          <span class="bayes-item-val" style="color:#ffd166;">${(data.prior_probability*100).toFixed(0)}%</span>
+        </div>
+        <span class="bayes-arrow">→</span>
+        <div class="bayes-item">
+          <span class="bayes-item-label">Posterior P</span>
+          <span class="bayes-item-val" style="color:#00d4ff;">${midPct}%</span>
+        </div>
+        <span class="bayes-arrow">⊕</span>
+        <div class="bayes-item">
+          <span class="bayes-item-label">LR</span>
+          <span class="bayes-item-val" style="color:#a0f0a0;">×${data.likelihood_ratio.toFixed(1)}</span>
+        </div>
+      </div>
+      <div class="ci-bar">
+        <div class="ci-fill" style="left:${leftPct}%;width:${widthPct}%;"></div>
+        <div class="ci-needle" style="left:${midPct}%;"></div>
+        <span class="ci-label-l">0%</span>
+        <span class="ci-label-r">100%</span>
+      </div>
+      <div class="ci-note">95% CI: [${(ci[0]*100).toFixed(1)}%, ${(ci[1]*100).toFixed(1)}%]</div>
+    </div>
+
+    <!-- Bottom grid -->
+    <div class="bottom-grid">
+      <div class="card">
+        <div class="card-title">Mechanism</div>
+        <p style="font-size:12px;color:#a0b8cc;line-height:1.7;">${data.mechanism}</p>
+        <div style="margin-top:12px;">
+          <div style="font-size:10px;color:#4a7a9a;font-family:'DM Mono',monospace;letter-spacing:1px;margin-bottom:6px;">KEY RESIDUES</div>
+          <div>${data.key_residues?.map(r=>`<span class="residue-tag">${r}</span>`).join('')}</div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="font-size:10px;color:#4a7a9a;font-family:'DM Mono',monospace;letter-spacing:1px;margin-bottom:4px;">BINDING POCKET</div>
+          <div style="font-size:11px;color:#7a9aaa;line-height:1.6;">${data.binding_pocket}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Profile</div>
+        ${barMeter(data.binding_score,'Binding Affinity','#00d4ff')}
+        ${barMeter(data.selectivity_index,'Target Selectivity','#a0f0a0')}
+        ${barMeter(data.drug_likeness,'Drug-likeness (QED)','#ffd166')}
+        ${barMeter(data.bayesian_posterior,'Bayesian Posterior','#cc99ff')}
+        ${barMeter(data.prior_probability,'Prior Probability','#ff9966')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Similar Approved Drugs</div>
+        ${data.similar_approved_drugs?.map(d=>`<div class="drug-item"><span class="drug-arrow">▸</span>${d}</div>`).join('')}
+        ${data.structural_alerts?.filter(Boolean).length > 0 ? `
+          <div style="font-size:10px;color:#4a7a9a;font-family:'DM Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin:10px 0 6px;">Structural Alerts</div>
+          ${data.structural_alerts.filter(Boolean).map(a=>`<div class="alert-item">⚠ ${a}</div>`).join('')}
+        ` : ''}
+      </div>
+    </div>
+  `;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderHistory() {
+  if (history.length === 0) { document.getElementById('historyPanel').style.display = 'none'; return; }
+  document.getElementById('historyPanel').style.display = 'block';
+  document.getElementById('historyPanel').innerHTML = `
+    <div class="history-panel">
+      <div class="card-title">Recent Analyses</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        ${history.map((h,i)=>`
+          <button class="history-btn" onclick="setExample('${h.protein}','${h.compound}')">
+            <span class="history-name">${h.protein} / ${h.compound}</span>
+            <span class="history-score" style="color:${colorForScore(h.score)}">${(h.score*100).toFixed(0)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+async function analyze() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const protein = document.getElementById('proteinInput').value.trim();
+  const compound = document.getElementById('compoundInput').value.trim();
+
+  if (!apiKey) { showError('API Key를 입력해주세요. console.anthropic.com에서 발급받을 수 있어요.'); return; }
+  if (!protein || !compound) { showError('Protein target과 compound를 모두 입력해주세요.'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('spinnerWrap').style.display = 'block';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: `Protein target: ${protein}\nCompound: ${compound}` }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    history = [{ protein, compound, score: parsed.binding_score }, ...history.slice(0, 4)];
+    renderResults(parsed, protein, compound);
+    renderHistory();
+  } catch(e) {
+    showError('Analysis failed: ' + e.message);
+  }
+
+  document.getElementById('spinnerWrap').style.display = 'none';
+  btn.disabled = false; btn.textContent = '▶ Analyze';
+}
+
+function showError(msg) {
+  document.getElementById('spinnerWrap').style.display = 'none';
+  const box = document.getElementById('errorBox');
+  box.textContent = '⚠ ' + msg;
+  box.style.display = 'block';
+  document.getElementById('analyzeBtn').disabled = false;
+  document.getElementById('analyzeBtn').textContent = '▶ Analyze';
+}
+
+document.getElementById('proteinInput').addEventListener('keydown', e => { if (e.key === 'Enter') analyze(); });
+document.getElementById('compoundInput').addEventListener('keydown', e => { if (e.key === 'Enter') analyze(); });
+</script>
+</body>
+</html>
