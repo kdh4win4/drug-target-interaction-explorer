@@ -1,12 +1,3 @@
-**Repository name:** `dti-explorer`
-**Description:** `Bayesian Drug-Target Interaction Explorer powered by Claude AI`
-
----
-
-**README.md 내용 — 이걸 그대로 복붙하세요:**
-
----
-
 # 💊 DTI Explorer — Bayesian Drug-Target Interaction Analysis
 
 An AI-powered drug-target interaction (DTI) analysis tool built with Claude AI and Bayesian statistical modeling.
