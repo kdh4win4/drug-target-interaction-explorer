@@ -37,6 +37,5 @@ This tool is for **educational and research purposes only**. Results are AI-gene
 ## 👨‍💻 Author
 **Dohoon Kim, M.S.** — Computational Biologist & Biostatistician  
 [LinkedIn](https://linkedin.com/in/yourprofile) | [GitHub](https://github.com/kdh4win4)  
-Co-founder, [PromptGenix LLC](https://promptgenix.com)
 
 ---
